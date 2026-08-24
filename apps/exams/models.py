@@ -1,5 +1,20 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+
+
+def get_tahun_ajaran_default():
+    """Hitung tahun ajaran akademik secara otomatis.
+    Juli–Desember → semester ganjil: X/X+1
+    Januari–Juni  → semester genap: X-1/X
+    """
+    now = timezone.now()
+    year = now.year
+    month = now.month
+    if month >= 7:
+        return f"{year}/{year + 1}"
+    else:
+        return f"{year - 1}/{year}"
 
 
 class MataPelajaran(models.Model):
@@ -57,6 +72,13 @@ class Ujian(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tanggal_ujian = models.DateField(null=True, blank=True, verbose_name='Tanggal Ujian')
+    tahun_ajaran = models.CharField(
+        max_length=20,
+        blank=True,
+        default=get_tahun_ajaran_default,
+        verbose_name='Tahun Ajaran',
+        help_text='Format: YYYY/YYYY. Contoh: 2025/2026. Diisi otomatis dari tanggal sekarang.',
+    )
 
     class Meta:
         verbose_name = 'Ujian'
@@ -98,6 +120,12 @@ class Soal(models.Model):
         blank=True,
         verbose_name='Kata Kunci Penting',
         help_text='Pisahkan dengan koma. Contoh: enkapsulasi, inheritance, polimorfisme',
+    )
+    referensi_embedding = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name='Embedding Kunci Jawaban',
+        help_text='Vektor embedding dari referensi_jawaban. Di-generate otomatis oleh sistem.',
     )
 
     class Meta:

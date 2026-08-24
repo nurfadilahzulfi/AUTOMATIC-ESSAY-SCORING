@@ -108,6 +108,12 @@ class Jawaban(models.Model):
         blank=True,
         verbose_name='Alasan Penilaian AI',
     )
+    similarity_score = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name='Skor Kemiripan Semantik',
+        help_text='Cosine similarity jawaban mahasiswa vs kunci jawaban (0.0 - 1.0). Dari model embedding.',
+    )
     grading_status = models.CharField(
         max_length=20,
         choices=GRADING_STATUS_CHOICES,

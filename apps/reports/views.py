@@ -127,6 +127,7 @@ class ExportExcelView(APIView):
         headers = ['No', 'Nama Lengkap', 'NIM', 'Kelas']
         for s in soal_list:
             headers.append(f'Soal {s.nomor_urut}')
+            headers.append(f'Similarity S{s.nomor_urut} (%)')
         headers += ['Total Nilai', 'Nilai Maks', 'Status']
 
         for col, h in enumerate(headers, 1):
@@ -143,6 +144,8 @@ class ExportExcelView(APIView):
             for soal in soal_list:
                 j = jmap.get(soal.pk)
                 row_data.append(j.nilai if j and j.nilai is not None else '-')
+                sim = j.similarity_score if j and j.similarity_score is not None else None
+                row_data.append(f"{round(sim * 100, 1)}%" if sim is not None else '-')
             row_data += [
                 sesi.total_nilai if sesi.total_nilai is not None else '-',
                 ujian.nilai_maksimal,
@@ -225,8 +228,15 @@ class ExportPDFMahasiswaView(APIView):
             nc = colors.HexColor('#2ecc71') if j.nilai == 10 else (colors.HexColor('#f39c12') if j.nilai == 5 else colors.HexColor('#e74c3c'))
             ns = ParagraphStyle('n', parent=styles['Normal'], textColor=nc, fontName='Helvetica-Bold')
             el.append(Paragraph(f"Nilai: {j.nilai if j.nilai is not None else 'Menunggu'}", ns))
+            if j.similarity_score is not None:
+                pct = round(j.similarity_score * 100, 1)
+                el.append(Paragraph(f"<i>Kemiripan Semantik: {pct}%</i>", styles['Normal']))
             if j.alasan_nilai:
                 el.append(Paragraph(f"<i>Catatan AI: {j.alasan_nilai}</i>", styles['Normal']))
+            elif j.grading_status in [Jawaban.GRADING_PENDING, Jawaban.GRADING_PROCESSING]:
+                el.append(Paragraph("<i>Catatan AI: Penilaian sedang diproses oleh AI...</i>", styles['Normal']))
+            else:
+                el.append(Paragraph("<i>Catatan AI: Tidak ada catatan penilaian.</i>", styles['Normal']))
             el.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#eee')))
             el.append(Spacer(1, 0.3*cm))
 

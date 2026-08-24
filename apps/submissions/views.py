@@ -152,7 +152,8 @@ class HasilUjianView(APIView):
             sesi = get_object_or_404(SesiUjian, pk=sesi_pk)
 
         jawaban_list = sesi.jawaban.all().select_related('soal').order_by('soal__nomor_urut')
-        semua_selesai = all(j.grading_status == Jawaban.GRADING_DONE for j in jawaban_list)
+        # Selesai dinilai jika tidak ada lagi yang statusnya pending atau processing
+        semua_selesai = not jawaban_list.filter(grading_status__in=[Jawaban.GRADING_PENDING, Jawaban.GRADING_PROCESSING]).exists()
 
         return Response({
             'sesi_id': sesi.pk,
@@ -172,3 +173,39 @@ class HasilUjianView(APIView):
                 for j in jawaban_list
             ],
         })
+
+
+class RiwayatUjianView(APIView):
+    """
+    GET /api/v1/submission/riwayat/
+    Daftar seluruh riwayat sesi ujian mahasiswa (selesai & pelanggaran).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_mahasiswa:
+            return Response({'detail': 'Akses ditolak.'}, status=403)
+
+        sesi_qs = SesiUjian.objects.filter(
+            mahasiswa=request.user,
+            status__in=[SesiUjian.STATUS_SELESAI, SesiUjian.STATUS_PELANGGARAN]
+        ).select_related('ujian', 'ujian__mata_pelajaran').order_by('-waktu_mulai')
+
+        result = []
+        for s in sesi_qs:
+            u = s.ujian
+            result.append({
+                'id': u.id,
+                'sesi_id': s.id,
+                'judul': u.judul,
+                'mata_pelajaran': u.mata_pelajaran.nama if u.mata_pelajaran else '—',
+                'durasi_menit': u.durasi_menit,
+                'jumlah_soal': u.jumlah_soal,
+                'nilai_maksimal': u.nilai_maksimal,
+                'total_nilai': s.total_nilai,
+                'tanggal_ujian': s.waktu_mulai.strftime('%d %b %Y, %H:%M') if s.waktu_mulai else (u.tanggal_ujian or '—'),
+                'status_sesi': s.status,
+                'semua_selesai_dinilai': s.semua_selesai_dinilai,
+            })
+        return Response(result)
+

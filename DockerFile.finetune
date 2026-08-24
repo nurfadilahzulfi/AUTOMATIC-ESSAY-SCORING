@@ -1,0 +1,58 @@
+# ==========================================================
+# Automatic Essay Scoring - Fine Tuning Environment
+# CUDA 12.4 + PyTorch 2.6 + JupyterLab & Unsloth
+# ==========================================================
+
+FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# ----------------------------------------------------------
+# Install system packages
+# ----------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    git-lfs \
+    curl \
+    wget \
+    nano \
+    vim \
+    build-essential \
+    && git lfs install \
+    && rm -rf /var/lib/apt/lists/*
+
+# ----------------------------------------------------------
+# Upgrade pip & Install Unsloth + JupyterLab ML Stack
+# ----------------------------------------------------------
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Install Unsloth & ML fine-tuning dependencies
+RUN pip install --no-cache-dir \
+    "unsloth @ git+https://github.com/unslothai/unsloth.git" \
+    unsloth_zoo trl peft accelerate bitsandbytes datasets \
+    transformers huggingface_hub jupyterlab scikit-learn scipy \
+    pandas openpyxl matplotlib requests httpx attrs \
+    && pip uninstall -y torchao
+
+# ----------------------------------------------------------
+# Expose Jupyter Port
+# ----------------------------------------------------------
+EXPOSE 8888
+
+# ----------------------------------------------------------
+# Start JupyterLab
+# ----------------------------------------------------------
+CMD [ \
+    "jupyter", \
+    "lab", \
+    "--ip=0.0.0.0", \
+    "--port=8888", \
+    "--no-browser", \
+    "--allow-root", \
+    "--NotebookApp.token=aes123", \
+    "--NotebookApp.password=" \
+]

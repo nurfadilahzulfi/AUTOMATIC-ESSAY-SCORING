@@ -11,11 +11,11 @@ class JawabanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Jawaban
         fields = ['id', 'soal', 'soal_nomor', 'soal_pertanyaan', 'teks_jawaban',
-                  'nilai', 'nilai_display', 'alasan_nilai', 'grading_status',
-                  'grading_status_display', 'submitted_at', 'graded_at']
+                  'nilai', 'nilai_display', 'alasan_nilai', 'similarity_score',
+                  'grading_status', 'grading_status_display', 'submitted_at', 'graded_at']
         read_only_fields = ['id', 'soal_nomor', 'soal_pertanyaan', 'nilai', 'nilai_display',
-                            'alasan_nilai', 'grading_status', 'grading_status_display',
-                            'submitted_at', 'graded_at']
+                            'alasan_nilai', 'similarity_score', 'grading_status',
+                            'grading_status_display', 'submitted_at', 'graded_at']
 
 
 class SaveJawabanSerializer(serializers.Serializer):
@@ -29,6 +29,7 @@ class SesiUjianSerializer(serializers.ModelSerializer):
     mahasiswa_nim = serializers.CharField(source='mahasiswa.nim', read_only=True)
     mahasiswa_kelas = serializers.CharField(source='mahasiswa.kelas', read_only=True)
     ujian_judul = serializers.CharField(source='ujian.judul', read_only=True)
+    ujian_durasi_menit = serializers.IntegerField(source='ujian.durasi_menit', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     jawaban = JawabanSerializer(many=True, read_only=True)
     nilai_maksimal = serializers.IntegerField(source='ujian.nilai_maksimal', read_only=True)
@@ -36,8 +37,8 @@ class SesiUjianSerializer(serializers.ModelSerializer):
     class Meta:
         model = SesiUjian
         fields = ['id', 'mahasiswa', 'mahasiswa_nama', 'mahasiswa_nim', 'mahasiswa_kelas',
-                  'ujian', 'ujian_judul', 'waktu_mulai', 'waktu_selesai', 'status',
-                  'status_display', 'total_nilai', 'nilai_maksimal', 'jawaban']
+                  'ujian', 'ujian_judul', 'ujian_durasi_menit', 'waktu_mulai', 'waktu_selesai',
+                  'status', 'status_display', 'total_nilai', 'nilai_maksimal', 'jawaban']
         read_only_fields = fields
 
 
@@ -53,4 +54,4 @@ class SesiUjianListSerializer(serializers.ModelSerializer):
         model = SesiUjian
         fields = ['id', 'mahasiswa_nama', 'mahasiswa_nim', 'mahasiswa_kelas',
                   'status', 'status_display', 'total_nilai', 'nilai_maksimal',
-                  'waktu_mulai', 'waktu_selesai']
+                  'waktu_mulai', 'waktu_selesai', 'ip_address']

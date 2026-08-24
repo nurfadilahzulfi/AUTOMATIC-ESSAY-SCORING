@@ -36,6 +36,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - REDIS_URL=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
     depends_on:
       - db
       - redis
@@ -43,7 +44,7 @@ services:
   celery:
     build: .
     container_name: django_celery
-    command: celery -A config worker --loglevel=info
+    command: celery -A config worker --loglevel=info --concurrency=2
     volumes:
       - .:/app
     environment:
@@ -57,6 +58,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - REDIS_URL=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
     depends_on:
       - db
       - redis
@@ -68,7 +70,32 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+      - .:/app
+    environment:
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=1
+    gpus: all
+
+  jupyter-finetune:
+    build:
+      context: .
+      dockerfile: DockerFile.finetune
+    container_name: jupyter_finetune
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   postgres_data:
   ollama_data:
+

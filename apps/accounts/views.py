@@ -188,7 +188,20 @@ class ImportMahasiswaView(APIView):
         except Exception as e:
             return Response({'detail': f'Gagal membaca file Excel: {str(e)}'}, status=400)
 
+class KelasListView(APIView):
+    """GET /api/v1/auth/kelas/ — Mengambil semua daftar kelas unik dari database."""
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        # Ambil nilai kelas yang unik dan tidak kosong dari tabel User mahasiswa
+        daftar_kelas = User.objects.filter(
+            role=User.ROLE_MAHASISWA
+        ).exclude(
+            kelas=''
+        ).values_list('kelas', flat=True).distinct().order_by('kelas')
+        
+        return Response(list(daftar_kelas))
+        
 class ExportKartuUjianView(APIView):
     """
     GET /api/v1/auth/mahasiswa/export-kartu/?kelas=TI-3A
@@ -241,6 +254,74 @@ class ExportKartuUjianView(APIView):
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{fname}"'
         return response
+
+
+class TambahMahasiswaSatuView(APIView):
+    """
+    POST /api/v1/auth/mahasiswa/tambah/
+    Tambahkan satu mahasiswa secara manual (tanpa import Excel).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_dosen:
+            return Response({'detail': 'Akses ditolak.'}, status=403)
+
+        nama = request.data.get('nama_lengkap', '').strip()
+        nim = request.data.get('nim', '').strip()
+        kelas = request.data.get('kelas', '').strip()
+
+        if not nama or not nim:
+            return Response({'detail': 'Nama lengkap dan NIM wajib diisi.'}, status=400)
+
+        if User.objects.filter(nim=nim).exists():
+            return Response({'detail': f"NIM '{nim}' sudah terdaftar dalam sistem."}, status=400)
+
+        password = _generate_password()
+        user = User.objects.create_user(
+            username=nim,
+            password=password,
+            nama_lengkap=nama,
+            nim=nim,
+            kelas=kelas,
+            role=User.ROLE_MAHASISWA,
+            plain_password=password,
+        )
+        return Response({
+            'detail': f'Mahasiswa {nama} berhasil ditambahkan.',
+            'mahasiswa': MahasiswaListSerializer(user).data,
+            'password': password,
+        }, status=201)
+
+
+class KelasRenameView(APIView):
+    """
+    PUT /api/v1/auth/kelas/rename/
+    Rename semua mahasiswa dari kelas lama ke nama kelas baru.
+    DELETE /api/v1/auth/kelas/<kelas_name>/ — hapus kelas (pindahkan ke kelas kosong).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        if not request.user.is_dosen:
+            return Response({'detail': 'Akses ditolak.'}, status=403)
+        kelas_lama = request.data.get('kelas_lama', '').strip()
+        kelas_baru = request.data.get('kelas_baru', '').strip()
+        if not kelas_lama or not kelas_baru:
+            return Response({'detail': 'kelas_lama dan kelas_baru wajib diisi.'}, status=400)
+        count = User.objects.filter(role=User.ROLE_MAHASISWA, kelas=kelas_lama).update(kelas=kelas_baru)
+        return Response({'detail': f'{count} mahasiswa dipindahkan ke kelas {kelas_baru}.', 'count': count})
+
+    def delete(self, request):
+        if not request.user.is_dosen:
+            return Response({'detail': 'Akses ditolak.'}, status=403)
+        kelas_name = request.data.get('kelas', '').strip()
+        if not kelas_name:
+            return Response({'detail': 'Nama kelas wajib diisi.'}, status=400)
+        count = User.objects.filter(role=User.ROLE_MAHASISWA, kelas=kelas_name).count()
+        if count > 0:
+            return Response({'detail': f'Kelas {kelas_name} masih memiliki {count} mahasiswa. Pindahkan atau hapus mahasiswa terlebih dahulu.'}, status=400)
+        return Response({'detail': f'Kelas {kelas_name} berhasil dihapus (tidak ada mahasiswa).'}) 
 
 
 class UnlockMahasiswaView(APIView):

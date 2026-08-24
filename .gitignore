@@ -1,5 +1,5 @@
 /venv
-.env
+/FINE-TUNING/
 db.sqlite3
 *.pyc
 __pycache__/

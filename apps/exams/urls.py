@@ -3,7 +3,7 @@ from .views import (
     DashboardDosenView,
     MataPelajaranListCreateView, MataPelajaranDetailView,
     UjianListCreateView, UjianDetailView, AktivasiUjianView, MonitorUjianView,
-    SoalListCreateView, SoalDetailView, UploadSoalExcelView,
+    HentikanUjianView, SoalListCreateView, SoalDetailView, UploadSoalExcelView,
     UjianTersediaView,
 )
 
@@ -25,6 +25,7 @@ urlpatterns = [
     path('<int:pk>/', UjianDetailView.as_view(), name='ujian_detail'),
     path('<int:pk>/aktivasi/', AktivasiUjianView.as_view(), name='aktivasi_ujian'),
     path('<int:pk>/monitor/', MonitorUjianView.as_view(), name='monitor_ujian'),
+    path('<int:pk>/hentikan/', HentikanUjianView.as_view(), name='hentikan_ujian'),
 
     # Soal
     path('<int:ujian_pk>/soal/', SoalListCreateView.as_view(), name='soal_list'),
